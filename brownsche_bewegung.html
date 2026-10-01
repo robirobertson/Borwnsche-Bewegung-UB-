@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Brownsche Bewegung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f3;
+    --surface: #ffffff;
+    --surface-2: #e2e9ec;
+    --ink: #17232d;
+    --ink-2: #4b5a66;
+    --line: #cdd7dd;
+    --accent: #2552c4;
+    --accent-soft: #dfe7fb;
+    --accent-ink: #ffffff;
+    --amber: #d9861a;
+    --good: #1d7f47;
+    --good-soft: #dcf1e4;
+    --bad: #b9352f;
+    --bad-soft: #f8e0de;
+    --shadow: 0 1px 2px rgba(23, 35, 45, .06), 0 6px 20px rgba(23, 35, 45, .06);
+    --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #10171d;
+      --surface: #18222a;
+      --surface-2: #222e38;
+      --ink: #e7edf1;
+      --ink-2: #a3b1bc;
+      --line: #2f3d48;
+      --accent: #86a6ff;
+      --accent-soft: #1f2c4d;
+      --accent-ink: #0c1530;
+      --amber: #f0a94a;
+      --good: #5bc98b;
+      --good-soft: #173526;
+      --bad: #f08079;
+      --bad-soft: #3d1c1a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #10171d;
+    --surface: #18222a;
+    --surface-2: #222e38;
+    --ink: #e7edf1;
+    --ink-2: #a3b1bc;
+    --line: #2f3d48;
+    --accent: #86a6ff;
+    --accent-soft: #1f2c4d;
+    --accent-ink: #0c1530;
+    --amber: #f0a94a;
+    --good: #5bc98b;
+    --good-soft: #173526;
+    --bad: #f08079;
+    --bad-soft: #3d1c1a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.55;
+    padding-inline: 16px;
+    padding-block: 0 48px;
+  }
+  @media (min-width: 720px) { body { padding-inline: 28px; } }
+  .wrap { max-width: 1200px; margin-inline: auto; }
+
+  h1, h2, h3 { font-family: var(--f-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  /* ---------- Kopf ---------- */
+  .top {
+    display: grid;
+    gap: 10px;
+    padding-block: 28px 22px;
+  }
+  .eyebrow {
+    font-size: 13px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    font-weight: 700;
+  }
+  .top h1 { font-size: clamp(34px, 6vw, 56px); font-weight: 800; letter-spacing: -.02em; }
+  .top h1 span { color: var(--amber); }
+  .lead { max-width: 62ch; font-size: 19px; color: var(--ink-2); }
+
+  /* ---------- Labor ---------- */
+  .lab {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .lab { grid-template-columns: minmax(0, 1fr); } }
+
+  .stage { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .stage-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+
+  .seg {
+    display: inline-flex;
+    background: var(--surface-2);
+    border-radius: 999px;
+    padding: 4px;
+    gap: 2px;
+    flex-wrap: wrap;
+  }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label {
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink-2);
+    user-select: none;
+    white-space: nowrap;
+  }
+  .seg input:checked + label { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+  .seg input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 1px; }
+  .seg.big label { padding: 9px 18px; font-size: 16px; }
+  .seg.fill { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-radius: 12px; }
+  .seg.fill label { padding: 7px 4px; font-size: 14px; text-align: center; border-radius: 9px; }
+
+  select {
+    font: inherit;
+    font-size: 15px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .canvas-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #1b1a16;
+    box-shadow: var(--shadow);
+    touch-action: none;
+  }
+  @media (min-width: 1100px) { .canvas-wrap { aspect-ratio: 16 / 11; } }
+  canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+  .chip {
+    position: absolute;
+    top: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(20, 22, 26, .72);
+    color: #f4f1e6;
+    pointer-events: none;
+  }
+  .chip.left { left: 12px; }
+  .chip.right { right: 12px; max-width: calc(100% - 140px); text-align: right; }
+
+  .readouts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+  @media (max-width: 620px) { .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .readout {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: grid;
+    gap: 2px;
+  }
+  .readout .k { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); font-weight: 700; }
+  .readout .v { font-family: var(--f-mono); font-size: 22px; font-variant-numeric: tabular-nums; }
+  .readout .v small { font-size: 14px; color: var(--ink-2); margin-left: 2px; }
+
+  /* ---------- Bedienfeld ---------- */
+  .controls {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px;
+    display: grid;
+    gap: 20px;
+  }
+  .ctl { display: grid; gap: 8px; }
+  .ctl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .ctl-head label, .ctl-head .lbl { font-weight: 700; }
+  .ctl-head output { font-family: var(--f-mono); font-size: 15px; color: var(--ink-2); text-align: right; }
+  .ctl .note { font-size: 14px; color: var(--ink-2); }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 28px;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 99px; background: var(--track, var(--surface-2)); }
+  input[type=range]::-moz-range-track { height: 8px; border-radius: 99px; background: var(--track, var(--surface-2)); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px; height: 24px; margin-top: -8px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 3px solid var(--ink);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 3px solid var(--ink);
+  }
+  #temp { --track: linear-gradient(90deg, #3b7fd6, #9aa7b4 45%, #e0483a); }
+  .scale-labels { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-2); margin-top: -4px; }
+
+  .toggles { display: grid; gap: 10px; }
+  .toggle { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+  .toggle input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+  .toggle span small { display: block; font-size: 14px; color: var(--ink-2); }
+
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  button {
+    font: inherit;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--ink-2); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .hr { height: 1px; background: var(--line); }
+  .status { font-size: 14px; color: var(--ink-2); min-height: 1.2em; }
+
+  /* Vollbild für den Beamer */
+  .lab:fullscreen {
+    background: var(--bg);
+    padding: 16px;
+    height: 100%;
+    overflow: auto;
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+  .lab:fullscreen .stage { height: 100%; }
+  .lab:fullscreen .canvas-wrap { aspect-ratio: auto; flex: 1; min-height: 0; }
+
+  footer { margin-top: 40px; font-size: 14px; color: var(--ink-2); max-width: 80ch; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">Physik · Klasse 7 · Teilchenmodell</div>
+    <h1>Brownsche <span>Bewegung</span></h1>
+    <p class="lead">Unter dem Mikroskop zittern winzige Tintenteilchen im Wasser ständig hin und her. Niemand schubst sie. Oder doch? Schau mit dem virtuellen Mikroskop genauer hin.</p>
+  </header>
+
+  <main class="lab" id="lab">
+    <section class="stage" aria-label="Simulation">
+      <div class="stage-bar">
+        <div class="seg big" role="radiogroup" aria-label="Ansicht">
+          <input type="radio" name="view" id="view-micro" value="micro" checked>
+          <label for="view-micro">Mikroskop</label>
+          <input type="radio" name="view" id="view-model" value="model">
+          <label for="view-model">Teilchenmodell</label>
+        </div>
+        <select id="medium" aria-label="Versuch auswählen">
+          <option value="water">Tinte in Wasser</option>
+          <option value="air">Rauch in Luft (Rauchkammer)</option>
+        </select>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="sim" role="img" aria-label="Simulation: große Probeteilchen werden von vielen kleinen Teilchen angestoßen und bewegen sich im Zickzack."></canvas>
+        <div class="chip left" id="chipMode">Mikroskop · 400-fach</div>
+        <div class="chip right" id="chipLens">Lupe: Maus über das Bild bewegen oder Finger auflegen</div>
+      </div>
+
+      <div class="readouts" aria-live="off">
+        <div class="readout"><span class="k">Zeit</span><span class="v" id="rTime">0,0<small>s</small></span></div>
+        <div class="readout"><span class="k">Stöße pro Sekunde</span><span class="v" id="rHits">0</span></div>
+        <div class="readout"><span class="k">Abstand vom Start</span><span class="v" id="rDist">0,0<small>µm</small></span></div>
+        <div class="readout"><span class="k"><span data-term="molPl">Wasserteilchen</span></span><span class="v" id="rCount">0</span></div>
+      </div>
+    </section>
+
+    <aside class="controls" aria-label="Einstellungen">
+      <div class="ctl">
+        <div class="ctl-head"><label for="temp">Temperatur</label><output id="tempOut" for="temp">20 °C</output></div>
+        <input type="range" id="temp" min="0" max="100" step="1" value="20">
+        <div class="scale-labels"><span>0 °C</span><span>50 °C</span><span>100 °C</span></div>
+        <p class="note" id="tempDesc">Zimmertemperatur</p>
+      </div>
+
+      <div class="ctl">
+        <div class="ctl-head"><span class="lbl" id="sizeLbl">Größe der <span data-term="probePl">Tintenteilchen</span></span><output id="sizeOut">2 µm</output></div>
+        <div class="seg fill" role="radiogroup" aria-labelledby="sizeLbl">
+          <input type="radio" name="size" id="size-s" value="s"><label for="size-s">klein</label>
+          <input type="radio" name="size" id="size-m" value="m" checked><label for="size-m">mittel</label>
+          <input type="radio" name="size" id="size-l" value="l"><label for="size-l">groß</label>
+          <input type="radio" name="size" id="size-x" value="x"><label for="size-x">gemischt</label>
+        </div>
+      </div>
+
+      <div class="ctl">
+        <div class="ctl-head"><label for="count">Anzahl <span data-term="probePl">Tintenteilchen</span></label><output id="countOut" for="count">1</output></div>
+        <input type="range" id="count" min="1" max="5" step="1" value="1">
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="toggles">
+        <label class="toggle"><input type="checkbox" id="optTrail" checked><span>Spur zeichnen<small>zeigt den Weg der <span data-term="probePl">Tintenteilchen</span></small></span></label>
+        <label class="toggle"><input type="checkbox" id="optHits"><span>Stöße sichtbar machen<small>jeder Stoß blitzt kurz auf</small></span></label>
+        <label class="toggle"><input type="checkbox" id="optTrack"><span>Ein <span data-term="mol">Wasserteilchen</span> verfolgen<small>rot markiert, in der Teilchen-Ansicht oder unter der Lupe</small></span></label>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="btns">
+        <button class="primary" id="btnPlay" type="button">Pause</button>
+        <button id="btnReset" type="button">Neu starten</button>
+        <button id="btnClear" type="button">Spur löschen</button>
+        <button id="btnFull" type="button">Vollbild</button>
+      </div>
+      <p class="status" id="status">Tipp: Leertaste = Pause/Weiter</p>
+    </aside>
+  </main>
+
+  <footer>
+    Interaktive Simulation für den Physikunterricht. Modellhafte Darstellung: Größen, Anzahlen und Geschwindigkeiten der Teilchen sind vereinfacht. In Wirklichkeit sind die Wasserteilchen viel kleiner und zahlreicher, und der Einfluss der Temperatur ist verstärkt dargestellt.
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Grundgrößen ----------
+  const PX_PER_UM = 24;          // Maßstab: 24 Bildpunkte = 1 µm
+  const R_MOL = 2.5;             // Radius der kleinen Teilchen (px)
+  const MASS_FACTOR = 0.5;       // Masse ~ Fläche
+  const V_BASE = 200;            // Grundgeschwindigkeit (px/s) je Richtung
+  const SIZES = { s: 12, m: 24, l: 42 };
+  const PROBE_COLORS = ['#3d3aa0', '#d65a86', '#4f9e5f', '#e39a32', '#2f93b8'];
+
+  const MEDIA = {
+    water: {
+      density: 1 / 220, speed: 1.0,
+      mol: 'Wasserteilchen', molPl: 'Wasserteilchen',
+      probe: 'Tintenteilchen', probePl: 'Tintenteilchen',
+      microBg: '#e9eef5', modelBg: '#e3f0f7', molColor: '#3f95cc',
+      chip: 'Mikroskop · 400-fach · Tinte in Wasser'
+    },
+    air: {
+      density: 1 / 700, speed: 1.3,
+      mol: 'Luftteilchen', molPl: 'Luftteilchen',
+      probe: 'Rauchteilchen', probePl: 'Rauchteilchen',
+      microBg: '#26272b', modelBg: '#eef1f4', molColor: '#5b6fa0',
+      chip: 'Mikroskop · 400-fach · Rauchkammer'
+    }
+  };
+
+  // ---------- Zustand ----------
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  const wrap = document.getElementById('canvasWrap');
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const S = {
+    view: 'micro', medium: 'water', temp: 20, size: 'm', count: 1,
+    trail: true, hits: false, track: false,
+    running: !reduceMotion
+  };
+
+  let W = 0, H = 0, dpr = 1;
+  let N = 0, mx, my, mvx, mvy;
+  let probes = [];
+  let flashes = [];
+  let hitTimes = [];
+  let simTime = 0;
+  let trackTrail = [];
+  let lens = { on: false, x: 0, y: 0, touch: false };
+
+  const speedScale = t => 0.3 + 1.7 * t / 100;
+  const sigma = () => V_BASE * MEDIA[S.medium].speed * speedScale(S.temp);
+
+  function gauss() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function radiusFor(i) {
+    if (S.size === 'x') return i % 2 === 0 ? SIZES.s : SIZES.l;
+    return SIZES[S.size];
+  }
+
+  // ---------- Aufbau ----------
+  function init() {
+    if (!W || !H) return;
+    const sg = sigma();
+    probes = [];
+    const n = S.count;
+    for (let i = 0; i < n; i++) {
+      const R = radiusFor(i);
+      const M = MASS_FACTOR * (R / R_MOL) * (R / R_MOL);
+      let x, y, ok = false, tries = 0;
+      while (!ok && tries < 400) {
+        tries++;
+        if (n === 1) { x = W / 2; y = H / 2; }
+        else if (n === 2 && tries < 5) { x = W * (i === 0 ? 0.33 : 0.67); y = H / 2; }
+        else { x = W * (0.18 + 0.64 * Math.random()); y = H * (0.18 + 0.64 * Math.random()); }
+        ok = probes.every(p => Math.hypot(p.x - x, p.y - y) > p.R + R + 30);
+      }
+      const vs = sg / Math.sqrt(M);
+      probes.push({ x, y, vx: vs * gauss(), vy: vs * gauss(), R, M, sx: x, sy: y, trail: [[x, y]], color: PROBE_COLORS[i % PROBE_COLORS.length] });
+    }
+
+    N = Math.min(3200, Math.round(W * H * MEDIA[S.medium].density));
+    mx = new Float32Array(N); my = new Float32Array(N);
+    mvx = new Float32Array(N); mvy = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      let x, y, inside = true;
+      while (inside) {
+        x = R_MOL + Math.random() * (W - 2 * R_MOL);
+        y = R_MOL + Math.random() * (H - 2 * R_MOL);
+        inside = probes.some(p => (p.x - x) ** 2 + (p.y - y) ** 2 < (p.R + R_MOL + 1) ** 2);
+      }
+      mx[i] = x; my[i] = y;
+      mvx[i] = sg * gauss(); mvy[i] = sg * gauss();
+    }
+    flashes = []; hitTimes = []; simTime = 0; trackTrail = [];
+    document.getElementById('rCount').textContent = N.toLocaleString('de-DE');
+    updateReadouts(true);
+  }
+
+  function rescaleVelocities(oldTemp, newTemp) {
+    const f = speedScale(newTemp) / speedScale(oldTemp);
+    for (let i = 0; i < N; i++) { mvx[i] *= f; mvy[i] *= f; }
+    probes.forEach(p => { p.vx *= f; p.vy *= f; });
+  }
+
+  // ---------- Physik ----------
+  function step(dt) {
+    // Probeteilchen bewegen, Wände
+    for (const p of probes) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.x < p.R) { p.x = p.R; p.vx = Math.abs(p.vx); }
+      else if (p.x > W - p.R) { p.x = W - p.R; p.vx = -Math.abs(p.vx); }
+      if (p.y < p.R) { p.y = p.R; p.vy = Math.abs(p.vy); }
+      else if (p.y > H - p.R) { p.y = H - p.R; p.vy = -Math.abs(p.vy); }
+    }
+
+    // Probeteilchen untereinander
+    for (let a = 0; a < probes.length; a++) {
+      for (let b = a + 1; b < probes.length; b++) {
+        const A = probes[a], B = probes[b];
+        const dx = B.x - A.x, dy = B.y - A.y, rr = A.R + B.R;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= rr * rr || d2 === 0) continue;
+        const d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+        const vrel = (B.vx - A.vx) * nx + (B.vy - A.vy) * ny;
+        if (vrel < 0) {
+          const k = 2 * vrel / (A.M + B.M);
+          A.vx += k * B.M * nx; A.vy += k * B.M * ny;
+          B.vx -= k * A.M * nx; B.vy -= k * A.M * ny;
+        }
+        const push = (rr - d) / 2;
+        A.x -= nx * push; A.y -= ny * push; B.x += nx * push; B.y += ny * push;
+      }
+    }
+
+    // kleine Teilchen bewegen und mit Probeteilchen stoßen
+    const maxX = W - R_MOL, maxY = H - R_MOL;
+    for (let i = 0; i < N; i++) {
+      let x = mx[i] + mvx[i] * dt, y = my[i] + mvy[i] * dt;
+      let vx = mvx[i], vy = mvy[i];
+      if (x < R_MOL) { x = R_MOL; vx = Math.abs(vx); } else if (x > maxX) { x = maxX; vx = -Math.abs(vx); }
+      if (y < R_MOL) { y = R_MOL; vy = Math.abs(vy); } else if (y > maxY) { y = maxY; vy = -Math.abs(vy); }
+
+      for (let j = 0; j < probes.length; j++) {
+        const p = probes[j];
+        const rr = p.R + R_MOL;
+        const dx = x - p.x, dy = y - p.y;
+        if (dx > rr || dx < -rr || dy > rr || dy < -rr) continue;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= rr * rr || d2 === 0) continue;
+        const d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+        const vrel = (vx - p.vx) * nx + (vy - p.vy) * ny;
+        if (vrel < 0) {
+          // elastischer Stoß: m = 1, M = p.M
+          const km = 2 * p.M / (1 + p.M) * vrel;
+          const kM = 2 / (1 + p.M) * vrel;
+          vx -= km * nx; vy -= km * ny;
+          p.vx += kM * nx; p.vy += kM * ny;
+          if (j === 0) hitTimes.push(simTime);
+          if (S.hits && flashes.length < 400) flashes.push({ p: j, nx, ny, t: 0, s: Math.min(1, -vrel / (3 * sigma())) });
+        }
+        x = p.x + nx * rr; y = p.y + ny * rr;
+      }
+      mx[i] = x; my[i] = y; mvx[i] = vx; mvy[i] = vy;
+    }
+    simTime += dt;
+  }
+
+  // ---------- Zeichnen ----------
+  function drawProbe(p, micro) {
+    const g = ctx.createRadialGradient(p.x - p.R * 0.35, p.y - p.R * 0.4, p.R * 0.1, p.x, p.y, p.R);
+    if (S.medium === 'air' && micro) {
+      // Rauchteilchen streuen Licht: helle Punkte auf dunklem Grund
+      g.addColorStop(0, 'rgba(255,255,245,1)');
+      g.addColorStop(0.6, 'rgba(235,225,200,.85)');
+      g.addColorStop(1, 'rgba(200,190,160,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.R * 1.15, 0, Math.PI * 2); ctx.fill();
+      return;
+    }
+    if (micro) {
+      // Tintenteilchen: dunkle Farbkörnchen im hellen Lichtfeld
+      g.addColorStop(0, '#5a56b8');
+      g.addColorStop(0.55, '#2c2878');
+      g.addColorStop(1, '#15133d');
+    } else {
+      g.addColorStop(0, '#fff6e2');
+      g.addColorStop(0.5, p.color);
+      g.addColorStop(1, shade(p.color, -0.35));
+    }
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.R, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = micro ? 1.5 : 1;
+    ctx.strokeStyle = micro ? 'rgba(20,18,56,.8)' : 'rgba(30,30,30,.35)';
+    ctx.stroke();
+  }
+
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = c => Math.max(0, Math.min(255, Math.round(c * (1 + amt))));
+    return 'rgb(' + f(n >> 16) + ',' + f((n >> 8) & 255) + ',' + f(n & 255) + ')';
+  }
+
+  function drawMolecules() {
+    const m = MEDIA[S.medium];
+    ctx.fillStyle = m.molColor;
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      ctx.moveTo(mx[i] + R_MOL, my[i]);
+      ctx.arc(mx[i], my[i], R_MOL, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    if (S.track && N > 0) {
+      if (trackTrail.length > 1) {
+        ctx.strokeStyle = 'rgba(215,38,61,.55)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(trackTrail[0][0], trackTrail[0][1]);
+        for (let k = 1; k < trackTrail.length; k++) ctx.lineTo(trackTrail[k][0], trackTrail[k][1]);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#d7263d';
+      ctx.beginPath(); ctx.arc(mx[0], my[0], 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  }
+
+  function drawTrails(micro) {
+    ctx.lineJoin = 'round';
+    for (const p of probes) {
+      if (p.trail.length < 2) continue;
+      ctx.strokeStyle = micro ? (S.medium === 'air' ? 'rgba(255,200,120,.8)' : 'rgba(180,90,20,.75)') : shade(p.color, -0.2);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(p.trail[0][0], p.trail[0][1]);
+      for (let k = 1; k < p.trail.length; k++) ctx.lineTo(p.trail[k][0], p.trail[k][1]);
+      ctx.stroke();
+      // Startpunkt
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, 3.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function drawFlashes(dt) {
+    for (let k = flashes.length - 1; k >= 0; k--) {
+      const f = flashes[k];
+      f.t += dt;
+      if (f.t > 0.35 || !probes[f.p]) { flashes.splice(k, 1); continue; }
+      const p = probes[f.p];
+      const a = 1 - f.t / 0.35;
+      const x = p.x + f.nx * p.R, y = p.y + f.ny * p.R;
+      const len = 6 + 10 * f.s;
+      ctx.strokeStyle = 'rgba(255,120,20,' + a.toFixed(3) + ')';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x + f.nx * len, y + f.ny * len);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,230,120,' + a.toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function drawScaleBar(micro) {
+    const len = 5 * PX_PER_UM;
+    const x = 16, y = H - 20;
+    const dark = micro && S.medium === 'air';
+    ctx.fillStyle = dark ? 'rgba(0,0,0,.45)' : 'rgba(255,255,255,.75)';
+    ctx.fillRect(x - 8, y - 22, len + 16, 34);
+    ctx.fillStyle = dark ? '#f1efe6' : '#1b1f24';
+    ctx.fillRect(x, y, len, 4);
+    ctx.font = '600 13px "Atkinson Hyperlegible", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('5 µm', x + len / 2, y - 6);
+  }
+
+  function draw(dt) {
+    const m = MEDIA[S.medium];
+    const micro = S.view === 'micro';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ctx.fillStyle = micro ? m.microBg : m.modelBg;
+    ctx.fillRect(0, 0, W, H);
+
+    if (!micro) drawMolecules();
+    if (S.trail) drawTrails(micro);
+    for (const p of probes) drawProbe(p, micro);
+    if (S.hits) drawFlashes(dt); else flashes.length = 0;
+
+    if (micro) {
+      // Vignette wie im Okular
+      const r = Math.hypot(W, H) / 2;
+      const g = ctx.createRadialGradient(W / 2, H / 2, r * 0.45, W / 2, H / 2, r);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, S.medium === 'air' ? 'rgba(0,0,0,.6)' : 'rgba(30,40,70,.4)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      if (lens.on) drawLens();
+    }
+    drawScaleBar(micro);
+
+    if (!S.running) {
+      ctx.fillStyle = 'rgba(20,22,26,.72)';
+      const label = 'Pausiert';
+      ctx.font = '700 15px "Atkinson Hyperlegible", system-ui, sans-serif';
+      const w = ctx.measureText(label).width + 24;
+      roundRect(W / 2 - w / 2, 12, w, 30, 15);
+      ctx.fill();
+      ctx.fillStyle = '#f4f1e6';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, W / 2, 32);
+    }
+  }
+
+  function drawLens() {
+    const LR = Math.max(60, Math.min(110, Math.min(W, H) * 0.2));
+    const x = lens.x, y = lens.touch ? lens.y - LR - 20 : lens.y;
+    const cy = Math.max(LR + 4, y);
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, cy, LR, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = MEDIA[S.medium].modelBg;
+    ctx.fillRect(x - LR, cy - LR, LR * 2, LR * 2);
+    drawMolecules();
+    if (S.trail) drawTrails(false);
+    for (const p of probes) drawProbe(p, false);
+    if (S.hits) {
+      // Blitze nochmals über dem Lupenbild
+      for (const f of flashes) {
+        const p = probes[f.p]; if (!p) continue;
+        const a = 1 - f.t / 0.35;
+        ctx.fillStyle = 'rgba(255,140,30,' + a.toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(p.x + f.nx * p.R, p.y + f.ny * p.R, 3.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+    ctx.lineWidth = 6; ctx.strokeStyle = '#1c1d21';
+    ctx.beginPath(); ctx.arc(x, cy, LR, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#b9bcc4';
+    ctx.beginPath(); ctx.arc(x, cy, LR + 3, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // ---------- Anzeigen ----------
+  const fmt1 = v => v.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  let lastReadout = 0;
+  function updateReadouts(force) {
+    const now = performance.now();
+    if (!force && now - lastReadout < 250) return;
+    lastReadout = now;
+    while (hitTimes.length && hitTimes[0] < simTime - 1) hitTimes.shift();
+    const window1 = Math.min(1, simTime);
+    const rate = window1 > 0.2 ? Math.round(hitTimes.length / window1) : 0;
+    document.getElementById('rTime').innerHTML = fmt1(simTime) + '<small>s</small>';
+    document.getElementById('rHits').textContent = rate.toLocaleString('de-DE');
+    const p = probes[0];
+    const dist = p ? Math.hypot(p.x - p.sx, p.y - p.sy) / PX_PER_UM : 0;
+    document.getElementById('rDist').innerHTML = fmt1(dist) + '<small>µm</small>';
+  }
+
+  // ---------- Hauptschleife ----------
+  let last = performance.now();
+  let trailClock = 0;
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 1 / 30);
+    last = now;
+    if (S.running && W) {
+      step(dt / 2); step(dt / 2);
+      trailClock += dt;
+      if (trailClock > 0.05) {
+        trailClock = 0;
+        for (const p of probes) {
+          p.trail.push([p.x, p.y]);
+          if (p.trail.length > 4000) p.trail.shift();
+        }
+      }
+      if (S.track && N) {
+        trackTrail.push([mx[0], my[0]]);
+        if (trackTrail.length > 90) trackTrail.shift();
+      }
+      updateReadouts(false);
+    }
+    if (W) draw(S.running ? dt : 0);
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- Größe ----------
+  function resize() {
+    const r = wrap.getBoundingClientRect();
+    const nw = Math.round(r.width), nh = Math.round(r.height);
+    if (!nw || !nh) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(nw * dpr);
+    canvas.height = Math.round(nh * dpr);
+    if (W && H && probes.length) {
+      const sx = nw / W, sy = nh / H;
+      for (let i = 0; i < N; i++) { mx[i] *= sx; my[i] *= sy; }
+      for (const p of probes) {
+        p.x = Math.min(nw - p.R, Math.max(p.R, p.x * sx));
+        p.y = Math.min(nh - p.R, Math.max(p.R, p.y * sy));
+        p.sx *= sx; p.sy *= sy;
+        p.trail.forEach(pt => { pt[0] *= sx; pt[1] *= sy; });
+      }
+      trackTrail = [];
+      W = nw; H = nh;
+    } else {
+      W = nw; H = nh;
+      init();
+    }
+    if (!S.running) draw(0);
+  }
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(wrap);
+  else window.addEventListener('resize', resize);
+
+  // ---------- Bedienelemente ----------
+  const $ = id => document.getElementById(id);
+  const tempDesc = t => t < 10 ? 'eiskalt' : t < 18 ? 'kalt' : t < 26 ? 'Zimmertemperatur' : t < 45 ? 'warm' : t < 75 ? 'heiß' : 'sehr heiß';
+  const sizeText = { s: '1 µm', m: '2 µm', l: '3,5 µm', x: '1 µm und 3,5 µm' };
+
+  function syncLabels() {
+    const m = MEDIA[S.medium];
+    document.querySelectorAll('[data-term]').forEach(el => { el.textContent = m[el.dataset.term]; });
+    $('tempOut').textContent = S.temp + ' °C';
+    $('tempDesc').textContent = tempDesc(S.temp);
+    $('sizeOut').textContent = sizeText[S.size];
+    $('countOut').textContent = S.count;
+    $('chipMode').textContent = S.view === 'micro' ? m.chip : 'Teilchenmodell';
+    $('chipLens').hidden = S.view !== 'micro';
+    $('btnPlay').textContent = S.running ? 'Pause' : 'Start';
+  }
+
+  function syncControls() {
+    $('view-' + S.view).checked = true;
+    $('medium').value = S.medium;
+    $('temp').value = S.temp;
+    $('size-' + S.size).checked = true;
+    $('count').value = S.count;
+    $('optTrail').checked = S.trail;
+    $('optHits').checked = S.hits;
+    $('optTrack').checked = S.track;
+    syncLabels();
+  }
+
+  document.querySelectorAll('input[name=view]').forEach(r => r.addEventListener('change', e => {
+    S.view = e.target.value; syncLabels(); if (!S.running) draw(0);
+  }));
+  $('medium').addEventListener('change', e => { S.medium = e.target.value; init(); syncLabels(); if (!S.running) draw(0); });
+  $('temp').addEventListener('input', e => {
+    const t = +e.target.value;
+    rescaleVelocities(S.temp, t);
+    S.temp = t; hitTimes = []; syncLabels();
+  });
+  document.querySelectorAll('input[name=size]').forEach(r => r.addEventListener('change', e => {
+    S.size = e.target.value; init(); syncLabels(); if (!S.running) draw(0);
+  }));
+  $('count').addEventListener('input', e => { S.count = +e.target.value; init(); syncLabels(); if (!S.running) draw(0); });
+  $('optTrail').addEventListener('change', e => { S.trail = e.target.checked; if (!S.running) draw(0); });
+  $('optHits').addEventListener('change', e => { S.hits = e.target.checked; });
+  $('optTrack').addEventListener('change', e => { S.track = e.target.checked; trackTrail = []; if (!S.running) draw(0); });
+
+  function togglePlay() { S.running = !S.running; last = performance.now(); syncLabels(); if (!S.running) draw(0); }
+  $('btnPlay').addEventListener('click', togglePlay);
+  $('btnReset').addEventListener('click', () => { init(); if (!S.running) draw(0); });
+  $('btnClear').addEventListener('click', () => {
+    probes.forEach(p => { p.trail = [[p.x, p.y]]; p.sx = p.x; p.sy = p.y; });
+    trackTrail = [];
+    updateReadouts(true);
+    if (!S.running) draw(0);
+  });
+
+  const lab = $('lab');
+  const status = $('status');
+  if (!lab.requestFullscreen) $('btnFull').hidden = true;
+  $('btnFull').addEventListener('click', () => {
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    lab.requestFullscreen().catch(() => { status.textContent = 'Vollbild ist in dieser Ansicht nicht möglich. Nutze die Vollbild-Taste des Browsers (F11).'; });
+  });
+  document.addEventListener('fullscreenchange', () => {
+    $('btnFull').textContent = document.fullscreenElement ? 'Vollbild beenden' : 'Vollbild';
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.code !== 'Space') return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (['input', 'select', 'textarea', 'button'].includes(tag)) return;
+    e.preventDefault();
+    togglePlay();
+  });
+
+  // Lupe
+  function lensPos(e) {
+    const r = canvas.getBoundingClientRect();
+    lens.x = e.clientX - r.left; lens.y = e.clientY - r.top;
+  }
+  canvas.addEventListener('pointermove', e => {
+    if (e.pointerType === 'mouse' || lens.touch) { lens.on = true; lensPos(e); if (!S.running) draw(0); }
+  });
+  canvas.addEventListener('pointerdown', e => {
+    lens.touch = e.pointerType !== 'mouse';
+    lens.on = true; lensPos(e);
+    if (lens.touch) canvas.setPointerCapture(e.pointerId);
+    if (!S.running) draw(0);
+  });
+  const lensOff = e => {
+    if (e.type === 'pointerleave' && lens.touch) return;
+    if (e.type === 'pointerup' && e.pointerType === 'mouse') return;
+    lens.on = false; lens.touch = false;
+    if (!S.running) draw(0);
+  };
+  canvas.addEventListener('pointerup', lensOff);
+  canvas.addEventListener('pointercancel', lensOff);
+  canvas.addEventListener('pointerleave', lensOff);
+
+  // ---------- Start ----------
+  syncControls();
+  if (reduceMotion) status.textContent = 'Die Simulation ist pausiert. Mit „Start“ geht es los.';
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
